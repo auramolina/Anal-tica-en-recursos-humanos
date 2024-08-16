@@ -1,1 +1,1 @@
-# Anal-tica-en-recursos-humanos
+# Analítica en recursos humanos
