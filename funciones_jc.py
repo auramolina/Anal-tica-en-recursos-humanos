@@ -62,7 +62,7 @@ def medir_modelos(modelos,scoring,X,y,cv):
 
 def preparar_datos(df):
 
-    list_cat = joblib.load("/content/drive/MyDrive/AA/Analitica-en-recursos-humanos/salidas/ddummies2016.pkl")
+    list_cat = joblib.load("/content/drive/MyDrive/AA/Analitica-en-recursos-humanos/salidas/cat2016.pkl")
     var_names = joblib.load("/content/drive/MyDrive/AA/Analitica-en-recursos-humanos/salidas/var_names.pkl")
     scaler = joblib.load("/content/drive/MyDrive/AA/Analitica-en-recursos-humanos/salidas/scaler.pkl")
 
