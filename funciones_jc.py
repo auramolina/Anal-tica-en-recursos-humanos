@@ -6,10 +6,8 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.model_selection import cross_val_predict, cross_val_score, cross_validate
 import joblib
 from sklearn.preprocessing import StandardScaler ## escalar variables 
+from sklearn.preprocessing import LabelEncoder
 
-####Este archivo contienen funciones utiles a utilizar en diferentes momentos del proyecto
-
-###########Esta función permite ejecutar un archivo  con extensión .sql que contenga varias consultas
 
 def ejecutar_sql (nombre_archivo, cur):
   sql_file=open(nombre_archivo)
@@ -17,33 +15,22 @@ def ejecutar_sql (nombre_archivo, cur):
   sql_file.close
   cur.executescript(sql_as_string)
   
- 
 
-def imputar_f (df,list_cat):  
-        
-    
-    df_c=df[list_cat]
-
-    df_n=df.loc[:,~df.columns.isin(list_cat)]
-
-    imputer_n=SimpleImputer(strategy='median')
-    imputer_c=SimpleImputer( strategy='most_frequent')
-
-    imputer_n.fit(df_n)
-    imputer_c.fit(df_c)
-    imputer_c.get_params()
-    imputer_n.get_params()
-
-    X_n=imputer_n.transform(df_n)
-    X_c=imputer_c.transform(df_c)
+def columnas_na(df):
+    # Obtener las columnas que tienen al menos un valor nulo
+    columnas_con_nulos = df.columns[df.isnull().any()].tolist()
+    return columnas_con_nulos
 
 
-    df_n=pd.DataFrame(X_n,columns=df_n.columns)
-    df_c=pd.DataFrame(X_c,columns=df_c.columns)
-    df_c.info()
-    df_n.info()
-
-    df =pd.concat([df_n,df_c],axis=1)
+def imputar_datos (df, variables):
+    for variable in variables:
+        # Calcula la moda de la variable
+        moda = df[variable].mode()[0]  # Selecciona el primer valor de la moda en caso de que haya múltiples modas
+        # Imputa los valores nulos con la moda
+        df[variable].fillna(moda, inplace=True)
+        # Imprime información sobre los valores nulos imputados
+        nulos_imputados = df[variable].isnull().sum()
+    # Devuelve el DataFrame modificado
     return df
 
 
@@ -73,32 +60,24 @@ def medir_modelos(modelos,scoring,X,y,cv):
     return metric_modelos
 
 
+def preparar_datos(df):
 
-def preparar_datos (df):
-   
-    
+    list_cat = joblib.load("/content/drive/MyDrive/AA/Analitica-en-recursos-humanos/Datos/cc.pkl")
+    var_names = joblib.load("/content/drive/MyDrive/AA/Analitica-en-recursos-humanos/salidas/var_names.pkl")
+    scaler = joblib.load("/content/drive/MyDrive/AA/Analitica-en-recursos-humanos/salidas/scaler.pkl")
 
-    #######Cargar y procesar nuevos datos ######
-   
-    
-    #### Cargar modelo y listas 
-    
-   
-    list_cat=joblib.load("salidas\\list_cat.pkl")
-    list_dummies=joblib.load("salidas\\list_dummies.pkl")
-    var_names=joblib.load("salidas\\var_names.pkl")
-    scaler=joblib.load( "salidas\\scaler.pkl") 
+    nulos = columnas_na(df)
+    df_t = imputar_datos(df, nulos)
+    le = LabelEncoder()
+    for column in list_cat:
+        if len(df_t[column].unique()) == 2:
+            df_t[column] = le.fit_transform(df_t[column])
+    df_t = pd.get_dummies(df_t)
+    df_t = df_t.loc[:, ~df_t.columns.isin(['EmployeeID'])]
 
-    ####Ejecutar funciones de transformaciones
-    
-    df=imputar_f(df,list_cat)
-    df_dummies=pd.get_dummies(df,columns=list_dummies)
-    df_dummies= df_dummies.loc[:,~df_dummies.columns.isin(['perf_2023','EmpID2'])]
-    X2=scaler.transform(df_dummies)
-    X=pd.DataFrame(X2,columns=df_dummies.columns)
-    X=X[var_names]
-    
-    
-    
-    
+    # Asegurar que las dimensiones de los datos coincidan
+    X2 = scaler.transform(df_t)  # Aplicar la transformación del scaler
+    X = pd.DataFrame(X2, columns=df_t.columns)
+    X = X[var_names]  # Seleccionar las variables necesarias
+
     return X
